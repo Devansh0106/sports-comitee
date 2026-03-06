@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { motion } from 'framer-motion';
-import { FileSpreadsheet, Plus, Trash2, Wallet, TrendingDown, Package, ShoppingCart, ExternalLink } from 'lucide-react';
+import { FileSpreadsheet, Plus, Trash2, Wallet, TrendingDown, Package, ShoppingCart, ExternalLink, Upload, Image as ImageIcon } from 'lucide-react';
 
 export default function Join() {
   const { role, coreCreds, coreId, expenses, addExpense, deleteExpense, equipment, addEquipment, deleteEquipment } = useAppStore();
@@ -10,8 +10,6 @@ export default function Join() {
   const power = role === 'core' && coreId ? coreCreds[coreId]?.power : null;
   const isMaster = role === 'admin' || power === 'master';
   
-  // Basic & Classic can edit Registration, Attendance
-  // Only Classic & Master can edit Budget, Equipment
   const canEditReg = isMaster || power === 'basic' || power === 'classic';
   const canEditBudget = isMaster || power === 'classic';
   const isStaff = role === 'admin' || role === 'core';
@@ -29,7 +27,7 @@ export default function Join() {
         </div>
       )}
 
-      {activeTab === 'registration' && <FormView title="Registration Form" actionLabel="Submit Registration" dbTitle="Registration Database" xlsx="gcet sports.xlsx" canEdit={canEditReg} excelLink={excelLink} />}
+      {activeTab === 'registration' && <FormView title="Registration Form" actionLabel="Submit Registration" dbTitle="Registration Database" xlsx="gcet sports.xlsx" canEdit={canEditReg} excelLink={excelLink} showUpload={true} />}
       
       {isStaff && (
         <>
@@ -55,11 +53,24 @@ function TabButton({ label, active, onClick }: any) {
   );
 }
 
-function FormView({ title, actionLabel, dbTitle, xlsx, canEdit, excelLink }: any) {
+function FormView({ title, actionLabel, dbTitle, xlsx, canEdit, excelLink, showUpload }: any) {
   const { setIslandMessage } = useAppStore();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleSubmit = () => {
     setIslandMessage(`${title} data saved to ${xlsx}`);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -69,7 +80,36 @@ function FormView({ title, actionLabel, dbTitle, xlsx, canEdit, excelLink }: any
         {canEdit && <button className="bg-red-500 text-white px-4 py-1.5 rounded-full text-xs font-bold hover:bg-red-600 transition-colors">Unpublish</button>}
       </div>
 
-      <div className="bg-[#1e1e3f]/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 space-y-4 shadow-2xl">
+      <div className="bg-[#1e1e3f]/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 space-y-6 shadow-2xl">
+        {showUpload && (
+          <div className="flex flex-col items-center gap-4">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="w-32 h-32 rounded-3xl bg-black/30 border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-[#6b5cff]/50 hover:bg-black/40 transition-all overflow-hidden relative group"
+            >
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <>
+                  <Upload className="text-white/20 group-hover:text-[#6b5cff] transition-colors" size={32} />
+                  <span className="text-[10px] font-bold text-white/20 mt-2 uppercase tracking-widest">Upload Photo</span>
+                </>
+              )}
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Plus className="text-white" size={24} />
+              </div>
+            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleFileChange} 
+            />
+            <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Passport size photo required</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input placeholder="Full Name" />
           <Input placeholder="Email ID" />
