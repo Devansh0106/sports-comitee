@@ -1,13 +1,14 @@
-import React, { useRef } from 'react';
-import { useAppStore } from '@/lib/store';
-import { Shield, KeyRound, Trash2, Plus, AlertCircle, Edit3, Image as ImageIcon, MessageSquare, Palette, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { useAppStore, getFaceEmoji } from '@/lib/store';
+import { Shield, KeyRound, Trash2, Plus, Palette, Upload, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'wouter';
 
 export default function Admin() {
-  const { role, coreId, coreCreds, updateCoreCred, updateCoreId, addCoreCred, deleteCoreCred, setIslandMessage, bgUrl, setBgUrl, bannerMsg, setBanner } = useAppStore();
+  const { role, coreId, coreCreds, updateCoreCred, addCoreCred, deleteCoreCred, setIslandMessage, bgUrl, setBgUrl, bannerMsg, setBanner, setAdminPass } = useAppStore();
   const [, setLoc] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newName, setNewName] = useState('');
 
   if (role !== 'admin' && role !== 'core') {
     setLoc('/');
@@ -17,13 +18,17 @@ export default function Admin() {
   const power = role === 'core' && coreId ? coreCreds[coreId]?.power : null;
   const isMaster = role === 'admin' || power === 'master';
   
-  // Classic, Master, and Admin can edit Announcement Banner
   const canEditBanner = isMaster || power === 'classic';
-  // IT CAN BE EDIT OR MODEFI BY ADMIN ONLY (Core ID management)
   const canManageIDs = role === 'admin';
 
-  // Core can ONLY see their own ID if they aren't master
   const visibleCreds = isMaster ? Object.values(coreCreds) : Object.values(coreCreds).filter(c => c.id === coreId);
+
+  const posts = [
+    "President", "Vice President", "Secretary", "Coordinator", "Sports Lead", 
+    "Core Head", "Equipment Head", "Graphic Head", "Reels & VFX Head", 
+    "Treasurer Head", "Volunteer Head", "Documentation Head", "Logistics Head", "Member"
+  ];
+  const levels = ["Master Core", "Classic Core", "Basic Core"];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,8 +43,36 @@ export default function Admin() {
     }
   };
 
+  const mapPowerToLevel = (power: string) => {
+    if (power === 'master') return 'Master Core';
+    if (power === 'classic') return 'Classic Core';
+    return 'Basic Core';
+  };
+
+  const mapLevelToPower = (level: string) => {
+    if (level === 'Master Core') return 'master';
+    if (level === 'Classic Core') return 'classic';
+    return 'basic';
+  };
+
+  const handleGenerateID = () => {
+    if(!newName.trim()) return;
+    // format as name.surname matching image "rishi.bhut" if there are spaces
+    const parts = newName.trim().split(' ');
+    let id = parts[0].toLowerCase();
+    if(parts.length > 1) {
+      id += '.' + parts[1].toLowerCase();
+    } else {
+      id += '.' + Math.floor(Math.random()*100);
+    }
+    const pass = id.replace('.', '') + "123";
+    addCoreCred(id, pass, 'basic', newName.trim(), 'Member');
+    setNewName('');
+    setIslandMessage(`ID Generated: ${id}`);
+  };
+
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6 pb-20">
       
       <div className={`p-6 rounded-[28px] border relative overflow-hidden ${
         isMaster ? 'bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-500/30' : 'bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-blue-500/30'
@@ -57,6 +90,29 @@ export default function Admin() {
           {isMaster ? 'You have Master Control access. You can add/delete IDs, grant power levels, and customize themes.' : `You have ${power} Core access. You can manage your own credentials.`}
         </p>
       </div>
+
+      {role === 'admin' && (
+        <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 backdrop-blur-xl">
+          <h3 className="text-xl font-bold flex items-center gap-3 mb-6">
+            <div className="p-2 bg-red-500/20 rounded-xl">
+              <KeyRound size={20} className="text-red-500" /> 
+            </div>
+            Admin Security
+          </h3>
+          <p className="text-sm text-white/60 mb-4">Change the primary admin password. (The master override code cannot be changed).</p>
+          <div className="flex gap-4">
+            <button 
+              onClick={() => {
+                const p = prompt("Enter new Admin Password:");
+                if(p) setAdminPass(p);
+              }}
+              className="px-6 py-3 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white rounded-xl text-sm font-bold transition-colors border border-red-500/30"
+            >
+              Change Admin Password
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {isMaster && (
@@ -125,101 +181,103 @@ export default function Admin() {
         )}
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 backdrop-blur-xl">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-          <h3 className="text-xl font-bold flex items-center gap-3">
-            <div className="p-2 bg-[#fca311]/20 rounded-xl">
-              <KeyRound size={20} className="text-[#fca311]" /> 
-            </div>
-            {isMaster ? 'Core Access Management' : 'My Account Credentials'}
-          </h3>
-          {canManageIDs && (
-            <button 
-              onClick={() => {
-                const id = prompt("Assign new Core ID:");
-                if(!id) return;
-                const pass = prompt("Set Password:");
-                if(!pass) return;
-                const pwr = prompt("Power Level (master/basic/classic):", "basic");
-                addCoreCred(id, pass, (pwr as any) || 'basic');
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-bold transition-colors text-sm"
-            >
-              <Plus size={16} /> Issue ID
-            </button>
-          )}
-        </div>
+      <div className="bg-[#1e1e3f]/80 border border-white/10 rounded-[28px] p-8 backdrop-blur-xl shadow-2xl">
         
-        <div className="space-y-3">
-          {visibleCreds.map(cred => (
-            <div key={cred.id} className="flex items-center justify-between bg-black/40 p-5 rounded-2xl border border-white/5 hover:border-white/10 transition-colors group">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${
-                  cred.power === 'master' ? 'bg-red-500/20 text-red-400' : 
-                  cred.power === 'basic' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/10 text-white/50'
-                }`}>
-                  {cred.id.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-bold text-lg flex items-center gap-3">
-                    {cred.id}
-                    <span className={`px-2.5 py-1 text-[10px] rounded-lg font-bold uppercase tracking-wider border ${
-                      cred.power === 'master' ? 'bg-red-500/20 text-red-400 border-red-500/20' : 
-                      cred.power === 'basic' ? 'bg-blue-500/20 text-blue-400 border-blue-500/20' : 
-                      'bg-white/5 text-white/30 border-white/10'
-                    }`}>
-                      {cred.power} Lvl
-                    </span>
-                  </p>
-                  {(isMaster || cred.id === coreId) && <p className="text-xs text-white/40 font-mono mt-1 tracking-widest">PWD: <span className="text-white/80">{cred.pass}</span></p>}
-                </div>
+        {canManageIDs && (
+          <div className="mb-8 bg-[#181832] p-6 rounded-[24px] border border-white/5">
+            <h4 className="text-[11px] font-bold text-white/40 uppercase tracking-widest mb-4">ADD NEW CORE MEMBER</h4>
+            <div className="flex gap-4 items-start">
+              <div className="flex-1">
+                <input 
+                  type="text" 
+                  placeholder="Full Name (e.g. John Doe)" 
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  className="w-full bg-[#1e1e3f] border border-white/10 rounded-xl px-5 py-4 text-white text-sm focus:border-[#6b5cff] outline-none transition-colors"
+                />
+                <p className="text-[10px] text-white/30 mt-2 italic">* ID will be auto-generated as: name.surname</p>
               </div>
-              
-              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                {canManageIDs && (
-                  <>
-                    <button 
-                      onClick={() => {
-                        const newId = prompt("New Core ID:", cred.id);
-                        if (newId && newId !== cred.id) updateCoreId(cred.id, newId);
-                      }}
-                      className="p-2 bg-white/5 hover:bg-[#fca311] rounded-xl text-white/70 hover:text-white transition-colors"
+              <button 
+                onClick={handleGenerateID}
+                className="px-6 py-4 bg-[#10b981] hover:bg-[#0da06f] text-white rounded-xl font-bold transition-all active:scale-95 flex items-center gap-2 text-sm whitespace-nowrap shadow-lg shadow-green-500/20"
+              >
+                <Plus size={16} /> GENERATE ID
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-[#181832] rounded-[24px] border border-white/5 overflow-hidden">
+          <div className="grid grid-cols-12 gap-4 p-5 border-b border-white/10 text-[10px] font-bold text-white/40 uppercase tracking-widest bg-black/20">
+            <div className="col-span-5">NAME & ID</div>
+            <div className="col-span-5">ROLE & POST</div>
+            <div className="col-span-2 text-right">ACTIONS</div>
+          </div>
+
+          <div className="divide-y divide-white/5">
+            {visibleCreds.map(cred => (
+              <div key={cred.id} className="grid grid-cols-12 gap-4 p-5 items-center hover:bg-white/5 transition-colors group">
+                <div className="col-span-5 flex items-center gap-3">
+                  <div>
+                    <p className="font-bold text-[15px] text-white leading-tight">{cred.name || cred.id}</p>
+                    <p className="text-[13px] text-white/40 mt-0.5">{cred.id}</p>
+                    {(isMaster || cred.id === coreId) && (
+                       <p className="text-[10px] text-white/20 mt-1 font-mono hover:text-[#fca311] transition-colors">PWD: {cred.pass}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="col-span-5 flex flex-col gap-2">
+                  <div className="relative inline-block w-fit">
+                    <select 
+                      disabled={!canManageIDs}
+                      value={mapPowerToLevel(cred.power)}
+                      onChange={(e) => updateCoreCred(cred.id, { power: mapLevelToPower(e.target.value) as any })}
+                      className="bg-[#2a2a4a] border border-white/10 rounded-lg px-3 py-1.5 text-[13px] font-medium text-white appearance-none outline-none focus:border-[#6b5cff] disabled:opacity-70 pr-8 shadow-sm cursor-pointer"
                     >
-                      <Edit3 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const newPass = prompt("New Password:", cred.pass);
-                        if(newPass) updateCoreCred(cred.id, { pass: newPass });
-                      }}
-                      className="px-4 py-2 bg-[#6b5cff]/20 hover:bg-[#6b5cff]/40 text-[#6b5cff] hover:text-white rounded-xl text-xs font-bold transition-colors"
+                      {levels.map(l => <option key={l} value={l} className="bg-[#1e1e3f]">{l}</option>)}
+                    </select>
+                    {canManageIDs && <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#fca311] text-[10px]">▼</div>}
+                  </div>
+                  <div className="relative inline-block w-fit mt-1">
+                    <select 
+                      disabled={!canManageIDs}
+                      value={cred.post || "Member"}
+                      onChange={(e) => updateCoreCred(cred.id, { post: e.target.value })}
+                      className="bg-transparent border-none text-[#fca311] text-[13px] font-medium appearance-none outline-none cursor-pointer pr-6 hover:text-yellow-300 transition-colors"
                     >
-                      Edit
-                    </button>
+                      {posts.map(p => <option key={p} value={p} className="bg-[#1e1e3f] text-white">{p}</option>)}
+                    </select>
+                    {canManageIDs && <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-[#fca311] text-[10px]">▼</div>}
+                  </div>
+                </div>
+
+                <div className="col-span-2 flex justify-end items-center gap-3">
+                  {!canManageIDs && cred.id === coreId && (
+                     <button 
+                     onClick={() => {
+                       const newPass = prompt("New Password:", cred.pass);
+                       if(newPass) updateCoreCred(cred.id, { pass: newPass });
+                     }}
+                     className="px-3 py-1.5 bg-[#6b5cff]/20 hover:bg-[#6b5cff]/40 text-[#6b5cff] hover:text-white rounded-lg text-xs font-bold transition-colors"
+                   >
+                     Pass
+                   </button>
+                  )}
+                  {canManageIDs && (
                     <button 
                       onClick={() => {
-                        if(confirm("Permanently delete this Core ID?")) deleteCoreCred(cred.id);
+                        if(confirm(`Permanently delete ${cred.id}?`)) deleteCoreCred(cred.id);
                       }}
-                      className="p-2 bg-red-500/10 hover:bg-red-500/30 text-red-400 hover:text-red-300 rounded-xl transition-colors border border-red-500/20"
+                      className="text-red-500/50 hover:text-red-400 transition-colors p-2 hover:bg-red-500/10 rounded-lg"
                     >
                       <Trash2 size={16} />
                     </button>
-                  </>
-                )}
-                {!canManageIDs && cred.id === coreId && (
-                   <button 
-                   onClick={() => {
-                     const newPass = prompt("New Password:", cred.pass);
-                     if(newPass) updateCoreCred(cred.id, { pass: newPass });
-                   }}
-                   className="px-4 py-2 bg-[#6b5cff]/20 hover:bg-[#6b5cff]/40 text-[#6b5cff] hover:text-white rounded-xl text-xs font-bold transition-colors"
-                 >
-                   Change Pass
-                 </button>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </motion.div>

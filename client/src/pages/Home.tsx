@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useAppStore, getFaceEmoji } from '@/lib/store';
 import { Edit2, Trash2, PlusCircle, LayoutDashboard, Users, UserCog, ArrowRight, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -41,7 +41,7 @@ function TabButton({ icon, label, active, onClick }: any) {
 }
 
 function OverviewTab({ onGoToMentors, onGoToDept }: { onGoToMentors: () => void, onGoToDept: (dept: string) => void }) {
-  const { role, coreId, coreCreds, holidays, addHoliday, updateHoliday, deleteHoliday, bannerMsg, bannerVisible } = useAppStore();
+  const { role, coreId, coreCreds, holidays, addHoliday, updateHoliday, deleteHoliday, bannerMsg, bannerVisible, events, coreMembers } = useAppStore();
   
   const power = role === 'core' && coreId ? coreCreds[coreId]?.power : null;
   const isMaster = role === 'admin' || power === 'master';
@@ -83,11 +83,11 @@ function OverviewTab({ onGoToMentors, onGoToDept }: { onGoToMentors: () => void,
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-gradient-to-br from-[#6b5cff]/20 to-[#9f7aea]/10 border border-[#6b5cff]/30 p-6 rounded-[24px] text-center backdrop-blur-xl relative overflow-hidden group">
           <p className="text-xs text-[#b0b0cc] mb-2 font-bold tracking-widest uppercase relative z-10">Active Events</p>
-          <h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60 relative z-10">4</h2>
+          <h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60 relative z-10">{events.length}</h2>
         </div>
         <div className="bg-gradient-to-br from-[#fca311]/20 to-orange-500/10 border border-[#fca311]/30 p-6 rounded-[24px] text-center backdrop-blur-xl relative overflow-hidden group">
           <p className="text-xs text-[#b0b0cc] mb-2 font-bold tracking-widest uppercase relative z-10">Committee</p>
-          <h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60 relative z-10">24</h2>
+          <h2 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60 relative z-10">{coreMembers.length}</h2>
         </div>
       </div>
       
@@ -200,8 +200,8 @@ function MentorsTab() {
         {mentors.map(m => (
           <div key={m.id} className="bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-[24px] p-6 relative group hover:bg-white/10 transition-all hover:border-white/20">
             <div className="flex items-start gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#fca311] to-orange-500 shrink-0 flex items-center justify-center text-2xl font-bold shadow-[0_4px_20px_rgba(252,163,17,0.3)] text-white">
-                {m.name.charAt(0)}
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#fca311] to-orange-500 shrink-0 flex items-center justify-center text-3xl shadow-[0_4px_20px_rgba(252,163,17,0.3)]">
+                {getFaceEmoji(m.name)}
               </div>
               <div className="flex-1">
                 <h4 className="font-bold text-lg mb-1 text-white">{m.name}</h4>
@@ -231,7 +231,7 @@ function MentorsTab() {
 }
 
 function CoreTab({ dept, setDept }: { dept: string, setDept: (d: string) => void }) {
-  const { role, coreCreds, coreId, coreMembers, addCoreMember, updateCoreMember, deleteCoreMember } = useAppStore();
+  const { role, coreCreds, coreId, coreMembers, addCoreMember, updateCoreMember, deleteCoreMember, addCoreCred } = useAppStore();
   const depts = ["Core Head", "Equipment Head", "Graphic Head", "Reels & VFX Head", "Treasurer Head", "Volunteer Head", "Documentation Head", "Logistics Head"];
   const power = role === 'core' && coreId ? coreCreds[coreId]?.power : null;
   const isMaster = role === 'admin' || power === 'master';
@@ -245,6 +245,12 @@ function CoreTab({ dept, setDept }: { dept: string, setDept: (d: string) => void
     const branch = prompt("Branch:");
     const description = prompt("Description:");
     addCoreMember({ department: dept, name, branch: branch || '', description: description || '', dateAdded: new Date().toISOString().split('T')[0] });
+    
+    // Auto-generate Core ID
+    const generatedId = name.toLowerCase().replace(/\s+/g, '.') + Math.floor(Math.random()*100);
+    const generatedPass = name.toLowerCase().replace(/\s+/g, '') + '123';
+    addCoreCred(generatedId, generatedPass, 'basic', name, dept);
+    alert(`Member added!\nAuto-generated Core ID: ${generatedId}\nPassword: ${generatedPass}`);
   };
 
   const handleEdit = (m: any) => {
@@ -287,8 +293,8 @@ function CoreTab({ dept, setDept }: { dept: string, setDept: (d: string) => void
           {members.map(m => (
             <div key={m.id} className="flex items-center justify-between p-5 bg-black/40 rounded-[20px] border border-white/5 group hover:border-[#6b5cff]/50 hover:bg-black/60 transition-all">
               <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6b5cff] to-purple-600 flex items-center justify-center font-bold text-xl shadow-lg border border-white/10">
-                  {m.name.charAt(0)}
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6b5cff] to-purple-600 flex items-center justify-center text-2xl shadow-lg border border-white/10">
+                  {getFaceEmoji(m.name)}
                 </div>
                 <div>
                   <h4 className="font-bold text-lg">{m.name}</h4>

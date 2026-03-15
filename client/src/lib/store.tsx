@@ -26,6 +26,8 @@ export interface CoreCreds {
   id: string;
   pass: string;
   power: PowerLevel;
+  name?: string;
+  post?: string;
 }
 
 export interface Expense {
@@ -49,6 +51,21 @@ export interface Holiday {
   dateRange: string;
 }
 
+export interface Portal {
+  id: string;
+  title: string;
+  icon: string;
+  link: string;
+}
+
+export interface EventItem {
+  id: string;
+  name: string;
+  date: string;
+  description: string;
+  img: string;
+}
+
 interface AppState {
   role: Role;
   coreId: string | null;
@@ -58,15 +75,21 @@ interface AppState {
   holidays: Holiday[];
   expenses: Expense[];
   equipment: Equipment[];
+  portals: Portal[];
+  events: EventItem[];
   islandMessage: string | null;
   bgUrl: string;
   bannerMsg: string;
   bannerVisible: boolean;
+  formPublished: boolean;
+  adminPass: string;
   login: (role: Role, id?: string) => void;
   logout: () => void;
   setIslandMessage: (msg: string | null) => void;
   setBgUrl: (url: string) => void;
   setBanner: (msg: string, visible: boolean) => void;
+  setFormPublished: (pub: boolean) => void;
+  setAdminPass: (pass: string) => void;
   addMentor: (m: Omit<Mentor, 'id'>) => void;
   updateMentor: (id: string, m: Partial<Mentor>) => void;
   deleteMentor: (id: string) => void;
@@ -75,7 +98,7 @@ interface AppState {
   deleteCoreMember: (id: string) => void;
   updateCoreCred: (id: string, cred: Partial<CoreCreds>) => void;
   updateCoreId: (oldId: string, newId: string) => void;
-  addCoreCred: (id: string, pass: string, power: PowerLevel) => void;
+  addCoreCred: (id: string, pass: string, power: PowerLevel, name?: string, post?: string) => void;
   deleteCoreCred: (id: string) => void;
   addExpense: (e: Omit<Expense, 'id'>) => void;
   deleteExpense: (id: string) => void;
@@ -84,11 +107,17 @@ interface AppState {
   addHoliday: (h: Omit<Holiday, 'id'>) => void;
   updateHoliday: (id: string, h: Partial<Holiday>) => void;
   deleteHoliday: (id: string) => void;
+  addPortal: (p: Omit<Portal, 'id'>) => void;
+  updatePortal: (id: string, p: Partial<Portal>) => void;
+  deletePortal: (id: string) => void;
+  addEvent: (e: Omit<EventItem, 'id'>) => void;
+  updateEvent: (id: string, e: Partial<EventItem>) => void;
+  deleteEvent: (id: string) => void;
 }
 
 const defaultCreds: Record<string, CoreCreds> = {
-  '1111': { id: '1111', pass: 'CORE2026', power: 'basic' },
-  'balli': { id: 'balli', pass: 'BALLI123', power: 'master' }
+  '1111': { id: '1111', pass: 'CORE2026', power: 'basic', name: 'Pratik', post: 'President' },
+  'balli': { id: 'balli', pass: 'BALLI123', power: 'master', name: 'Balli', post: 'Equipment Lead' }
 };
 
 const MockContext = createContext<AppState | null>(null);
@@ -112,9 +141,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [holidays, setHolidays] = useState<Holiday[]>([
     { id: 'h1', title: 'Winter Break', dateRange: 'DEC 25 - JAN 1' }
   ]);
+  const [portals, setPortals] = useState<Portal[]>([
+    { id: 'p1', title: 'Khelo India', icon: '🏆', link: '#' },
+    { id: 'p2', title: 'Khel Mahakumbh', icon: '🏅', link: '#' }
+  ]);
+  const [events, setEvents] = useState<EventItem[]>([
+    { id: 'ev1', name: 'Inter-College Cricket', date: '2026-03-15', description: 'Annual cricket tournament with neighboring colleges.', img: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=800' }
+  ]);
   const [bgUrl, setBgUrlState] = useState(localStorage.getItem('g_bg') || '');
   const [bannerMsg, setBannerMsg] = useState(localStorage.getItem('g_msg') || '');
   const [bannerVisible, setBannerVisible] = useState(localStorage.getItem('g_msg_s') === 'Y');
+  const [formPublished, setFormPublishedState] = useState(localStorage.getItem('g_form_pub') !== 'N');
+  const [adminPass, setAdminPassState] = useState(localStorage.getItem('g_admin_pass') || 'GCET2351');
 
   const showIsland = (msg: string) => setIslandMessage(msg);
 
@@ -140,6 +178,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setBannerVisible(visible);
     localStorage.setItem('g_msg', msg);
     localStorage.setItem('g_msg_s', visible ? 'Y' : 'N');
+  };
+
+  const setFormPublished = (pub: boolean) => {
+    setFormPublishedState(pub);
+    localStorage.setItem('g_form_pub', pub ? 'Y' : 'N');
+    showIsland(pub ? 'Form Published' : 'Form Unpublished');
+  };
+
+  const setAdminPass = (pass: string) => {
+    setAdminPassState(pass);
+    localStorage.setItem('g_admin_pass', pass);
+    showIsland('Admin password updated');
   };
 
   const addMentor = (m: Omit<Mentor, 'id'>) => {
@@ -191,8 +241,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showIsland('Core ID renamed');
   };
 
-  const addCoreCred = (id: string, pass: string, power: PowerLevel) => {
-    setCoreCreds(prev => ({...prev, [id]: { id, pass, power }}));
+  const addCoreCred = (id: string, pass: string, power: PowerLevel, name?: string, post?: string) => {
+    setCoreCreds(prev => ({...prev, [id]: { id, pass, power, name, post }}));
     showIsland('New Core ID issued');
   };
 
@@ -240,15 +290,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     showIsland('Holiday removed');
   };
 
+  const addPortal = (p: Omit<Portal, 'id'>) => {
+    setPortals([...portals, { ...p, id: Math.random().toString(36).substr(2, 9) }]);
+    showIsland('Portal added');
+  };
+  const updatePortal = (id: string, p: Partial<Portal>) => {
+    setPortals(portals.map(x => x.id === id ? { ...x, ...p } : x));
+    showIsland('Portal updated');
+  };
+  const deletePortal = (id: string) => {
+    setPortals(portals.filter(x => x.id !== id));
+    showIsland('Portal deleted');
+  };
+
+  const addEvent = (e: Omit<EventItem, 'id'>) => {
+    setEvents([...events, { ...e, id: Math.random().toString(36).substr(2, 9) }]);
+    showIsland('Event added');
+  };
+  const updateEvent = (id: string, e: Partial<EventItem>) => {
+    setEvents(events.map(x => x.id === id ? { ...x, ...e } : x));
+    showIsland('Event updated');
+  };
+  const deleteEvent = (id: string) => {
+    setEvents(events.filter(x => x.id !== id));
+    showIsland('Event deleted');
+  };
+
   return (
     <MockContext.Provider value={{
-      role, coreId, coreCreds, mentors, coreMembers, holidays, expenses, equipment, islandMessage, bgUrl, bannerMsg, bannerVisible,
-      setIslandMessage, login, logout, setBgUrl, setBanner,
+      role, coreId, coreCreds, mentors, coreMembers, holidays, expenses, equipment, portals, events, islandMessage, bgUrl, bannerMsg, bannerVisible, formPublished, adminPass,
+      setIslandMessage, login, logout, setBgUrl, setBanner, setFormPublished, setAdminPass,
       addMentor, updateMentor, deleteMentor,
       addCoreMember, updateCoreMember, deleteCoreMember,
       updateCoreCred, updateCoreId, addCoreCred, deleteCoreCred,
       addExpense, deleteExpense, addEquipment, deleteEquipment,
-      addHoliday, updateHoliday, deleteHoliday
+      addHoliday, updateHoliday, deleteHoliday,
+      addPortal, updatePortal, deletePortal,
+      addEvent, updateEvent, deleteEvent
     }}>
       {children}
     </MockContext.Provider>
@@ -259,4 +337,11 @@ export const useAppStore = () => {
   const ctx = useContext(MockContext);
   if (!ctx) throw new Error('Missing AppProvider');
   return ctx;
+};
+
+export const getFaceEmoji = (str: string) => {
+  if (!str) return '😎';
+  const faces = ['😎', '🤠', '🤓', '🧐', '🦸', '🦹', '🧙', '🧑‍🚀', '👨‍🎤', '🕵️', '👩‍💻', '👨‍💻', '🧑‍🎓', '👨‍🏫', '🦁', '🦊', '🐯'];
+  const hash = str.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return faces[hash % faces.length];
 };

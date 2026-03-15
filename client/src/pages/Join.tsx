@@ -19,7 +19,7 @@ export default function Join() {
   const excelLink = "https://onedrive.live.com/view.aspx?resid=9876543210!123";
 
   return (
-    <div className="space-y-6 animate-in fade-in zoom-in duration-500">
+    <div className="space-y-6 animate-in fade-in zoom-in duration-500 pb-20">
       {isStaff && (
         <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 backdrop-blur-md overflow-x-auto scrollbar-hide">
           <TabButton label="Registration" active={activeTab === 'registration'} onClick={() => setActiveTab('registration')} />
@@ -56,7 +56,7 @@ function TabButton({ label, active, onClick }: any) {
 }
 
 function FormView({ title, actionLabel, dbTitle, xlsx, canEdit, excelLink, showUpload }: any) {
-  const { setIslandMessage } = useAppStore();
+  const { setIslandMessage, formPublished, setFormPublished, events } = useAppStore();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -79,56 +79,71 @@ function FormView({ title, actionLabel, dbTitle, xlsx, canEdit, excelLink, showU
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="flex justify-between items-center px-1">
         <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
-        {canEdit && <button className="bg-red-500 text-white px-4 py-1.5 rounded-full text-xs font-bold hover:bg-red-600 transition-colors">Unpublish</button>}
-      </div>
-
-      <div className="bg-[#1e1e3f]/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 space-y-6 shadow-2xl">
-        {showUpload && (
-          <div className="flex flex-col items-center gap-4">
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="w-32 h-32 rounded-3xl bg-black/30 border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-[#6b5cff]/50 hover:bg-black/40 transition-all overflow-hidden relative group"
-            >
-              {previewUrl ? (
-                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <>
-                  <Upload className="text-white/20 group-hover:text-[#6b5cff] transition-colors" size={32} />
-                  <span className="text-[10px] font-bold text-white/20 mt-2 uppercase tracking-widest">Upload Photo</span>
-                </>
-              )}
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Plus className="text-white" size={24} />
-              </div>
-            </div>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*" 
-              onChange={handleFileChange} 
-            />
-            <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Passport size photo required</p>
-          </div>
+        {canEdit && (
+          <button 
+            onClick={() => setFormPublished(!formPublished)} 
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${formPublished ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-[#10b981] hover:bg-[#0da06f] text-white'}`}
+          >
+            {formPublished ? 'Unpublish' : 'Publish'}
+          </button>
         )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input placeholder="Full Name" />
-          <Input placeholder="Email ID" />
-          <Input placeholder="Roll Number" />
-          <Input placeholder="Mobile Number" />
-          <Select options={["B.Tech", "Diploma"]} placeholder="Engineering Type" />
-          <Select options={["1", "2", "3", "4"]} placeholder="Year" />
-          <Select options={["Football", "Cricket", "Volleyball"]} placeholder="Select Event" />
-          <Select options={["1", "2", "3", "4", "5", "6", "7", "8"]} placeholder="Select Semester" />
-        </div>
-        <button 
-          onClick={handleSubmit}
-          className="w-full bg-[#6b5cff] hover:bg-[#8073ff] text-white py-4 rounded-2xl font-bold text-lg transition-all mt-4 shadow-lg active:scale-95"
-        >
-          {actionLabel}
-        </button>
       </div>
+
+      {!formPublished ? (
+        <div className="bg-[#1e1e3f]/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-12 text-center shadow-2xl">
+          <div className="text-6xl mb-6">⏳</div>
+          <h3 className="text-2xl font-bold text-white mb-2">We will be right soon</h3>
+          <p className="text-white/50">with a new event</p>
+        </div>
+      ) : (
+        <div className="bg-[#1e1e3f]/50 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 space-y-6 shadow-2xl">
+          {showUpload && (
+            <div className="flex flex-col items-center gap-4">
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-32 h-32 rounded-3xl bg-black/30 border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-[#6b5cff]/50 hover:bg-black/40 transition-all overflow-hidden relative group"
+              >
+                {previewUrl ? (
+                  <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <Upload className="text-white/20 group-hover:text-[#6b5cff] transition-colors" size={32} />
+                    <span className="text-[10px] font-bold text-white/20 mt-2 uppercase tracking-widest">Upload Photo</span>
+                  </>
+                )}
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Plus className="text-white" size={24} />
+                </div>
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleFileChange} 
+              />
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">Passport size photo required</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input placeholder="Full Name" />
+            <Input placeholder="Email ID" />
+            <Input placeholder="Roll Number" />
+            <Input placeholder="Mobile Number" />
+            <Select options={["B.Tech", "Diploma"]} placeholder="Engineering Type" />
+            <Select options={["1", "2", "3", "4"]} placeholder="Year" />
+            <Select options={events.map(e => e.name)} placeholder="Select Event" />
+            <Select options={["1", "2", "3", "4", "5", "6", "7", "8"]} placeholder="Select Semester" />
+          </div>
+          <button 
+            onClick={handleSubmit}
+            className="w-full bg-[#6b5cff] hover:bg-[#8073ff] text-white py-4 rounded-2xl font-bold text-lg transition-all mt-4 shadow-lg active:scale-95"
+          >
+            {actionLabel}
+          </button>
+        </div>
+      )}
 
       {canEdit && (
         <div className="bg-white/5 border border-white/10 rounded-[28px] p-6 flex items-center justify-between backdrop-blur-md">
@@ -328,11 +343,57 @@ function Select({ options, placeholder }: any) {
 
 function getEmoji(name: string) {
   const n = name.toLowerCase();
-  if (n.includes('football')) return '⚽';
+  // Sports
+  if (n.includes('football') || n.includes('soccer')) return '⚽';
   if (n.includes('bat') || n.includes('cricket')) return '🏏';
   if (n.includes('basketball')) return '🏀';
   if (n.includes('volleyball')) return '🏐';
   if (n.includes('tennis')) return '🎾';
   if (n.includes('shuttle') || n.includes('badminton')) return '🏸';
-  return '📦';
+  if (n.includes('baseball')) return '⚾';
+  if (n.includes('softball')) return '🥎';
+  if (n.includes('rugby')) return '🏉';
+  if (n.includes('frisbee')) return '🥏';
+  if (n.includes('billiards') || n.includes('pool')) return '🎱';
+  if (n.includes('yoyo')) return '🪀';
+  if (n.includes('ping pong') || n.includes('table tennis')) return '🏓';
+  if (n.includes('ice hockey')) return '🏒';
+  if (n.includes('field hockey')) return '🏑';
+  if (n.includes('lacrosse')) return '🥍';
+  if (n.includes('goal') || n.includes('net')) return '🥅';
+  if (n.includes('golf')) return '⛳';
+  if (n.includes('archery') || n.includes('bow')) return '🏹';
+  if (n.includes('fishing')) return '🎣';
+  if (n.includes('boxing')) return '🥊';
+  if (n.includes('martial arts') || n.includes('karate') || n.includes('judo')) return '🥋';
+  if (n.includes('running') || n.includes('track') || n.includes('jersey')) return '🎽';
+  if (n.includes('skate')) return '🛹';
+  if (n.includes('sled')) return '🛷';
+  if (n.includes('skat')) return '⛸';
+  if (n.includes('ski')) return '🎿';
+  if (n.includes('snowboard')) return '🏂';
+  if (n.includes('weight') || n.includes('gym')) return '🏋';
+  if (n.includes('wrestl')) return '🤼';
+  if (n.includes('gymnast')) return '🤸';
+  if (n.includes('fenc')) return '🤺';
+  if (n.includes('yoga')) return '🧘';
+  if (n.includes('surf')) return '🏄';
+  if (n.includes('swim')) return '🏊';
+  if (n.includes('water polo')) return '🤽';
+  if (n.includes('rowing') || n.includes('boat')) return '🚣';
+  if (n.includes('climb')) return '🧗';
+  if (n.includes('bike') || n.includes('cycle')) return '🚴';
+  
+  // Generic
+  if (n.includes('cone')) return '🔺';
+  if (n.includes('whistle')) return '😙';
+  if (n.includes('stopwatch')) return '⏱';
+  if (n.includes('bottle') || n.includes('water')) return '🚰';
+  if (n.includes('bag')) return '🎒';
+  if (n.includes('shoe')) return '👟';
+  if (n.includes('pump')) return '⛽';
+  if (n.includes('kit') || n.includes('med')) return '🧰';
+
+  const randomFaces = ['😎', '🤠', '😎', '🤩', '🤓', '🧐'];
+  return randomFaces[Math.floor(Math.random() * randomFaces.length)];
 }
